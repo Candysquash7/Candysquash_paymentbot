@@ -43,8 +43,8 @@ PACKAGES = {
     },
 }
 
+# NO M-PESA - ONLY SKRILL & BINANCE
 PAYMENTS = {
-    "mpesa": "📱 M-Pesa: 0768125767 - Candy 💋",
     "skrill": "💳 Skrill: mbithey7@gmail.com",
     "binance": "₿ Binance ID: 1282131122"
 }
@@ -85,7 +85,6 @@ async def buttons(update, context):
         context.user_data["pkg_obj"] = pkg
         text = f"{pkg['title']}\n\n{pkg['desc']}\n\n💰 Price: {pkg['price']} 😍\n👇 Choose how to pay baby: 💋"
         keyboard = [
-            [InlineKeyboardButton("📱 M-Pesa 🇰🇪", callback_data=f"pay_mpesa_{key}")],
             [InlineKeyboardButton("💳 Skrill 🔥", callback_data=f"pay_skrill_{key}")],
             [InlineKeyboardButton("₿ Binance 💋", callback_data=f"pay_binance_{key}")],
             [InlineKeyboardButton("🎬 Want Videos? VIP Links 🔥", callback_data="vip_only")],
@@ -101,9 +100,9 @@ async def buttons(update, context):
         context.user_data["pkg"] = pkg_key
         context.user_data["pkg_obj"] = pkg
         context.user_data["pay"] = pay_key
-        context.user_data["awaiting_phone"] = True
+        context.user_data["awaiting_contact"] = True
         pay_info = PAYMENTS.get(pay_key, "")
-        text = f"💰 Payment Details 💳\n\n📢 Channel: Chat with Candy for {pkg['title']}\n📦 Package: {pkg['label']}\n💵 Amount: {pkg['price']}\n⚠️ CHAT ONLY - No video call ❌\n\n{pay_info}\n\n📱 Send your M-Pesa phone number baby (e.g. 0712345678) 👇💋"
+        text = f"💰 Payment Details 💳\n\n📢 Channel: Chat with Candy for {pkg['title']}\n📦 Package: {pkg['label']}\n💵 Amount: {pkg['price']}\n⚠️ CHAT ONLY - No video call ❌\n\n{pay_info}\n\n📱 Send your payment email / Binance ID baby 👇💋"
         keyboard = [[InlineKeyboardButton("⬅️ Back 🔙", callback_data=f"pkg_{pkg_key}")]]
         await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
 
@@ -113,8 +112,8 @@ async def buttons(update, context):
     elif data.startswith("paid_"):
         pay_key = data.replace("paid_", "")
         pkg = context.user_data.get("pkg_obj")
-        phone = context.user_data.get("phone", "")
-        text = f"✅ Payment received baby! 💰🥰\n📦 {pkg['label']} - CHAT ONLY 💬\n📱 Phone: {phone} ☎️\n\n💦 Thank you baby! I'm ready... Send Hi to start your {pkg['label']} chat 💋🔥\n\n🎬 Want my videos/pics?\n👇 My VIP Links (separate price):"
+        contact = context.user_data.get("contact", "")
+        text = f"✅ Payment received baby! 💰🥰\n📦 {pkg['label']} - CHAT ONLY 💬\n📱 Contact: {contact} ☎️\n\n💦 Thank you baby! I'm ready... Send Hi to start your {pkg['label']} chat 💋🔥\n\n🎬 Want my videos/pics?\n👇 My VIP Links (separate price):"
         keyboard = [
             [InlineKeyboardButton("🔥 JOIN VIP TELEGRAM 💦", url=VIP_TELEGRAM)],
             [InlineKeyboardButton("💦 ONLYFANS - NAKED 🥵", url=ONLYFANS_LINK)]
@@ -122,7 +121,7 @@ async def buttons(update, context):
         await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
         if ADMIN_ID:
             try:
-                await context.bot.send_message(chat_id=ADMIN_ID, text=f"💰 CHAT PAID: @{query.from_user.username} ({query.from_user.id}) 📱 {phone} - {pkg['label']} - {pay_key} 🔥")
+                await context.bot.send_message(chat_id=ADMIN_ID, text=f"💰 CHAT PAID: @{query.from_user.username} ({query.from_user.id}) 📱 {contact} - {pkg['label']} - {pay_key} 🔥")
             except:
                 pass
 
@@ -146,31 +145,31 @@ async def buttons(update, context):
             pass
 
 async def handle_text(update, context):
-    if not context.user_data.get("awaiting_phone"):
+    if not context.user_data.get("awaiting_contact"):
         await start(update, context)
         return
-    phone = update.message.text.strip()
-    if len(phone) < 9:
-        await update.message.reply_text("❌ Invalid number baby 😔 Send like 0712345678 📱")
+    contact = update.message.text.strip()
+    if len(contact) < 5:
+        await update.message.reply_text("❌ Invalid contact baby 😔 Send your Skrill email or Binance ID 📱")
         return
-    context.user_data["phone"] = phone
-    context.user_data["awaiting_phone"] = False
+    context.user_data["contact"] = contact
+    context.user_data["awaiting_contact"] = False
     pkg = context.user_data.get("pkg_obj")
-    pay_key = context.user_data.get("pay", "mpesa")
+    pay_key = context.user_data.get("pay", "skrill")
     pay_info = PAYMENTS.get(pay_key, "")
-    text = f"💰 Payment Details 💳\n\n📢 Channel: Chat with Candy for {pkg['title']}\n📦 Package: {pkg['label']}\n💵 Amount: {pkg['price']}\n📱 Phone: {phone} ☎️\n⚠️ CHAT ONLY 💬\n\n{pay_info}\n\n📸 Now send screenshot here baby 😍👇"
+    text = f"💰 Payment Details 💳\n\n📢 Channel: Chat with Candy for {pkg['title']}\n📦 Package: {pkg['label']}\n💵 Amount: {pkg['price']}\n📱 Contact: {contact} ☎️\n⚠️ CHAT ONLY 💬\n\n{pay_info}\n\n📸 Now send screenshot here baby 😍👇"
     keyboard = [[InlineKeyboardButton("✅ I Have Paid 💸", callback_data=f"paid_{pay_key}")],[InlineKeyboardButton("📸 Send Screenshot 🖼️", callback_data="send_ss")]]
     await update.message.reply_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
 
 async def handle_photo(update, context):
     user = update.effective_user
     pkg = context.user_data.get("pkg_obj", {"label": "unknown"})
-    phone = context.user_data.get("phone", "No phone")
-    pay = context.user_data.get("pay", "mpesa")
+    contact = context.user_data.get("contact", "No contact")
+    pay = context.user_data.get("pay", "skrill")
     await update.message.reply_text("📸 Screenshot received baby 💦😍 Waiting for approval... ⏰💋")
     if ADMIN_ID:
         keyboard = [[InlineKeyboardButton("✅ APPROVE 🥰", callback_data=f"approve_{user.id}"), InlineKeyboardButton("❌ REJECT 😔", callback_data=f"reject_{user.id}")]]
-        caption = f"📸 CHAT from @{user.username} ({user.id}) 👤\n📱 {phone} ☎️\n📦 {pkg['label']} CHAT ONLY - {pay} 💰"
+        caption = f"📸 CHAT from @{user.username} ({user.id}) 👤\n📱 {contact} ☎️\n📦 {pkg['label']} CHAT ONLY - {pay} 💰"
         try:
             await context.bot.send_photo(chat_id=ADMIN_ID, photo=update.message.photo[-1].file_id, caption=caption, reply_markup=InlineKeyboardMarkup(keyboard))
         except:
