@@ -8,6 +8,7 @@ BOT_TOKEN = os.environ.get("BOT_TOKEN")
 ADMIN_ID = int(os.environ.get("ADMIN_ID", "0") or 0)
 
 app = Flask(__name__)
+
 @app.route('/')
 def home():
     return "Candy Bot Live 🍒"
@@ -19,17 +20,16 @@ PACKAGES = {
     "30min": {"label": "30 Mins - 300 KES 😍", "price": "300 KES", "time": "30 Mins"},
 }
 
-# CHANGE THESE TO YOUR REAL ACCOUNTS!
 PAYMENTS = {
     "mpesa": "Lipa na M-Pesa: 0768125767 - Candy",
-    "skrill": "Skrill: candy.squash@example.com",
-    "binance": "Binance Pay ID: 123456789 - Candy"
+    "skrill": "Skrill: mbithey7@gmail.com",
+    "binance": "Binance / Crypto ID: 1282131122 - Candy"
 }
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [[InlineKeyboardButton(v["label"], callback_data=f"pkg_{k}")] for k,v in PACKAGES.items()]
     await update.message.reply_text(
-        "Welcome to Candy's Squash 🍑💦\n\nChoose your package baby 👇",
+        "Welcome to Candy's Squash 🍑💦\n\nChoose your package baby 👇\nPay via M-Pesa and send screenshot:",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
@@ -41,6 +41,8 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if data.startswith("pkg_"):
         pkg_key = data.replace("pkg_", "")
         pkg = PACKAGES.get(pkg_key)
+        if not pkg:
+            return
         context.user_data["chosen_pkg"] = pkg_key
         keyboard = [
             [InlineKeyboardButton("M-Pesa 🇰🇪", callback_data="pay_mpesa")],
@@ -54,16 +56,16 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif data.startswith("pay_"):
         pay_key = data.replace("pay_", "")
         pkg_key = context.user_data.get("chosen_pkg", "3min")
-        pkg = PACKAGES[pkg_key]
-        pay_info = PAYMENTS[pay_key]
+        pkg = PACKAGES.get(pkg_key)
+        pay_info = PAYMENTS.get(pay_key, "")
         await query.edit_message_text(
-            f"You chose {pkg['time']} - {pkg['price']} 😍\n\n{pay_info}\n\nThen send screenshot here and wait for approval 💋"
+            f"You chose {pkg['time']} - {pkg['price']} 😍\n\n{pay_info}\n\nThen send M-Pesa screenshot here and wait for approval 💋\nWaiting for screenshot..."
         )
         if ADMIN_ID:
             user = query.from_user
             await context.bot.send_message(
                 chat_id=ADMIN_ID,
-                text=f"🔔 NEW ORDER\nUser: @{user.username} ({user.id})\nPackage: {pkg['time']} - {pkg['price']}\nPayment: {pay_key.upper()}\nWaiting for screenshot..."
+                text=f"🔔 NEW ORDER\nUser: @{user.username} ({user.id})\nPackage: {pkg['time']} - {pkg['price']}\nPayment: {pay_key.upper()}\n{pay_info}\nWaiting for screenshot..."
             )
 
 def run_flask():
