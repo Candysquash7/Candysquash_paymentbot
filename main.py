@@ -52,16 +52,14 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
                  f"Waiting for screenshot..."
         )
 
-def run_bot():
+def run_flask():
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
+
+if __name__ == "__main__":
+    threading.Thread(target=run_flask, daemon=True).start()
     print("Bot running...")
     application = ApplicationBuilder().token(BOT_TOKEN).build()
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CallbackQueryHandler(button_click))
     application.run_polling()
-
-if __name__ == "__main__":
-    # Start bot in background thread
-    threading.Thread(target=run_bot, daemon=True).start()
-    # Start Flask on Render's PORT
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port)
