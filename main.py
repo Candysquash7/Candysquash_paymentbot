@@ -61,5 +61,4 @@ if __name__ == "__main__":
     print("Bot running...")
     application = ApplicationBuilder().token(BOT_TOKEN).build()
     application.add_handler(CommandHandler("start", start))
-    application.add_handler(CallbackQueryHandler(button_click))
-    application.run_polling()
+    application.add_handler(
