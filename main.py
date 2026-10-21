@@ -1,87 +1,67 @@
-import os, threading
+import os
+import threading
 from flask import Flask
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
 
+BOT_TOKEN = os.environ.get("BOT_TOKEN")
+ADMIN_ID = int(os.environ.get("ADMIN_ID", "0"))
+
 app = Flask(__name__)
+
 @app.route('/')
-def home(): return "Candy Bot is Live!"
-def run_web():
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host='0.0.0.0', port=port)
-threading.Thread(target=run_web, daemon=True).start()
+def home():
+    return "Candy Bot is Live! 🍒"
 
-BOT_TOKEN = os.environ['BOT_TOKEN']
-ADMIN_ID = int(os.environ.get('ADMIN_ID', '0'))
-
-PRICES = {
-    3: 50,
-    5: 100,
-    10: 200,
-    30: 300
+PACKAGES = {
+    "3min": {"label": "3 Mins - 50 KES 🍒", "price": "50 KES", "time": "3 Mins"},
+    "5min": {"label": "5 Mins - 100 KES 🔥", "price": "100 KES", "time": "5 Mins"},
+    "10min": {"label": "10 Mins - 200 KES 💋", "price": "200 KES", "time": "10 Mins"},
+    "30min": {"label": "30 Mins - 300 KES 😍", "price": "300 KES", "time": "30 Mins"},
 }
 
-WELCOME = """🍒 WELCOME BABY TO CANDY'S PRIVATE CHAT 🍒
-
-Hey babe, I'm online now ❤️
-I'm so horny waiting for you...
-
-💋 CHOOSE YOUR TIME BABY:
-
-👉 3 Minutes - 50 KES
-👉 5 Minutes - 100 KES
-👉 10 Minutes - 200 KES
-👉 30 Minutes - 300 KES
-
-Tap a button below to unlock private chat with me 👇
-
-💳 SKRILL: mbithey7@gmail.com
-📱 M-PESA: 0768125767
-💰 BINANCE / USDT: 1282131122
-
-After you pay, send me screenshot here and I will add you instantly 🥰
-Don't keep me waiting baby..."""
-
-def get_menu():
-    keyboard = [
-        [InlineKeyboardButton(f"3 Mins - {PRICES[3]} KES 🍒", callback_data="buy_3")],
-        [InlineKeyboardButton(f"5 Mins - {PRICES[5]} KES 🔥", callback_data="buy_5")],
-        [InlineKeyboardButton(f"10 Mins - {PRICES[10]} KES 💋", callback_data="buy_10")],
-        [InlineKeyboardButton(f"30 Mins - {PRICES[30]} KES 😍", callback_data="buy_30")]
-    ]
-    return InlineKeyboardMarkup(keyboard)
-
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(WELCOME, reply_markup=get_menu())
+    keyboard = [
+        [InlineKeyboardButton(v["label"], callback_data=k)] for k,v in PACKAGES.items()
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text(
+        "Welcome to Candy's Squash 🍑💦\n\nChoose your package baby 👇\nPay via M-Pesa and send screenshot:",
+        reply_markup=reply_markup
+    )
 
-async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    user = query.from_user
-    minutes = int(query.data.replace("buy_", ""))
-    price = PRICES[minutes]
-    await query.message.reply_text(f"Good choice baby 😍\n\nYou selected: {minutes} minutes, {price} KES\n\nPay now to:\nM-PESA: 0768125767\nSKRILL: mbithey7@gmail.com\nBINANCE: 1282131122\n\nAfter paying, send screenshot here ❤️")
-    if ADMIN_ID != 0:
-        try:
-            await context.bot.send_message(chat_id=ADMIN_ID, text=f"Payment reported — please verify with M-Pesa before approving.\nUser: {user.first_name} | @{user.username}\nUser ID: {user.id}\nSelected: {minutes} minutes, {price} KES\n\nApprove with: /approve {user.id} {minutes}")
-        except: pass
-
-async def approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if len(context.args) != 2:
-        await update.message.reply_text("Usage: /approve USER_ID MINUTES")
+    pkg = PACKAGES.get(query.data)
+    if not pkg:
         return
-    try:
-        user_id = int(context.args[0])
-        minutes = int(context.args[1])
-        await context.bot.send_message(chat_id=user_id, text=f"Approved baby! 😍 You have {minutes} minutes with Candy! Enjoy... ❤️")
-        await update.message.reply_text(f"Approved {user_id} for {minutes} mins ✅")
-    except Exception as e:
-        await update.message.reply_text(f"Error: {e}")
+    user = query.from_user
+    # Tell user
+    await query.edit_message_text(
+        f"You chose {pkg['time']} - {pkg['price']} 😍\n\n"
+        f"Lipa na M-Pesa: 0768125767 - Candy\n"
+        f"Then send M-Pesa screenshot here and wait for approval 💋"
+    )
+    # Notify Admin
+    if ADMIN_ID:
+        await context.bot.send_message(
+            chat_id=ADMIN_ID,
+            text=f"🔔 NEW ORDER\nUser: @{user.username} ({user.id})\n"
+                 f"Package: {pkg['time']} - {pkg['price']}\n"
+                 f"Waiting for screenshot..."
+        )
 
-if __name__ == '__main__':
-    app_bot = ApplicationBuilder().token(BOT_TOKEN).build()
-    app_bot.add_handler(CommandHandler("start", start))
-    app_bot.add_handler(CommandHandler("approve", approve))
-    app_bot.add_handler(CallbackQueryHandler(button_handler))
+def run_bot():
     print("Bot running...")
-    app_bot.run_polling()
+    application = ApplicationBuilder().token(BOT_TOKEN).build()
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CallbackQueryHandler(button_click))
+    application.run_polling()
+
+if __name__ == "__main__":
+    # Start bot in background thread
+    threading.Thread(target=run_bot, daemon=True).start()
+    # Start Flask on Render's PORT
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
