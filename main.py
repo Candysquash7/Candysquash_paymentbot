@@ -1,4 +1,4 @@
-import os, time, threading
+import os, threading, requests
 from datetime import datetime, timedelta
 from flask import Flask
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, LabeledPrice
@@ -6,6 +6,13 @@ from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandle
 
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 ADMIN_ID = int(os.environ.get("ADMIN_ID", "7193430583") or 0)
+
+# DELETE OLD WEBHOOK AUTOMATICALLY
+if BOT_TOKEN:
+    try:
+        requests.get(f"https://api.telegram.org/bot{BOT_TOKEN}/deleteWebhook?drop_pending_updates=true", timeout=10)
+        print("Webhook deleted!")
+    except: pass
 
 PACKAGES = {
     "3min":  {"label": "🍒 3 Mins", "kes": "50 KES", "usd": "$1", "stars": 25, "minutes": 3},
@@ -16,13 +23,7 @@ PACKAGES = {
 
 ACTIVE_CHATS = {}
 
-WELCOME_TEXT = (
-    "Hey I'm Candy 😜💦\n\n"
-    "I get a little messy if you chat with me... 😈💋\n\n"
-    "Come let's have fun baby 🥵 Don't keep me waiting daddy... I'm already waiting for you 🥺👉👈\n\n"
-    "Choose package to chat with Candy down below baby 👇💦\n\n"
-    "Real fun is waiting for you on my VIP 🍒✨"
-)
+WELCOME_TEXT = "Hey I'm Candy 😜💦\n\nI get a little messy if you chat with me... 😈💋\n\nCome let's have fun baby 🥵 Don't keep me waiting daddy... I'm already waiting for you 🥺👉👈\n\nChoose package to chat with Candy down below baby 👇💦\n\nReal fun is waiting for you on my VIP 🍒✨"
 
 def get_main_keyboard():
     kb = []
@@ -32,7 +33,6 @@ def get_main_keyboard():
     kb.append([InlineKeyboardButton("🎬 My VIP - Real Fun Here 🔥", callback_data="vip_only")])
     return InlineKeyboardMarkup(kb)
 
-# FLASK FAKE WEBSITE TO KEEP RENDER ALIVE
 app_flask = Flask(__name__)
 @app_flask.route('/')
 def home():
@@ -57,16 +57,16 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await q.edit_message_text(WELCOME_TEXT, reply_markup=get_main_keyboard())
         return
     if d == "video_info":
-        await q.edit_message_text("📹 Video Call / Facetime Available 🥵💋", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="back_start")]]))
+        await q.edit_message_text("📹 Video Call / Facetime Available 🥵💋\n\nDM me for prices baby", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="back_start")]]))
         return
     if d == "vip_only":
-        await q.edit_message_text("🍒 My VIP\nTelegram: https://t.me/+eEsiq79bG6k2ODlk\nOnlyFans: https://onlyfans.com/candysquash", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="back_start")]]))
+        await q.edit_message_text("🍒 My VIP 🍒\n\nTelegram: https://t.me/+eEsiq79bG6k2ODlk\nOnlyFans: https://onlyfans.com/candysquash", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="back_start")]]))
         return
     if d.startswith("pkg_"):
         k = d.replace("pkg_","")
         p = PACKAGES[k]
         context.user_data["pkg"] = k
-        await q.edit_message_text(f"😍 {p['label']} - {p['usd']} / {p['stars']}⭐\n\nChoose payment baby 👇", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(f"⭐ {p['stars']} Stars", callback_data=f"pay_stars_{k}")],[InlineKeyboardButton(f"💳 Skrill - {p['usd']}", callback_data=f"pay_skrill_{k}")],[InlineKeyboardButton(f"₿ Binance - {p['usd']}", callback_data=f"pay_binance_{k}")],[InlineKeyboardButton("⬅️ Back", callback_data="back_start")]]))
+        await q.edit_message_text(f"😍 {p['label']} - {p['usd']} / {p['stars']}⭐\n\nDon't keep me waiting baby... pay now and let's get messy 🥵💦\n\nChoose payment 👇", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(f"⭐ {p['stars']} Stars", callback_data=f"pay_stars_{k}")],[InlineKeyboardButton(f"💳 Skrill - {p['usd']}", callback_data=f"pay_skrill_{k}")],[InlineKeyboardButton(f"₿ Binance - {p['usd']}", callback_data=f"pay_binance_{k}")],[InlineKeyboardButton("⬅️ Back", callback_data="back_start")]]))
         return
     if d.startswith("pay_"):
         _, method, pkg_key = d.split("_")
@@ -75,13 +75,13 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await context.bot.send_invoice(chat_id=q.from_user.id, title=p['label'], description="Chat with Candy", payload=pkg_key, provider_token="", currency="XTR", prices=[LabeledPrice(p['label'], p['stars'])])
         else:
             info = "Skrill: mbithey7@gmail.com" if method=="skrill" else "Binance ID: 1282131122"
-            await q.edit_message_text(f"💰 Pay {p['usd']} via:\n{info}\n\nSend screenshot after 📸", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("✅ I Have Paid", callback_data=f"paid_{pkg_key}")],[InlineKeyboardButton("⬅️ Back", callback_data=f"pkg_{pkg_key}")]]))
+            await q.edit_message_text(f"💰 Pay {p['usd']} via:\n{info}\n\nSend screenshot after baby 📸", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("✅ I Have Paid", callback_data=f"paid_{pkg_key}")],[InlineKeyboardButton("⬅️ Back", callback_data=f"pkg_{pkg_key}")]]))
         return
     if d.startswith("paid_"):
         pkg_key = d.replace("paid_","")
-        await q.edit_message_text("✅ Screenshot received baby! Waiting approval ⏰")
+        await q.edit_message_text("✅ Screenshot received baby! Waiting admin approval ⏰ Don't go anywhere 😘")
         if ADMIN_ID:
-            try: await context.bot.send_message(ADMIN_ID, f"💰 PAID! @{q.from_user.username} ({q.from_user.id}) - {pkg_key}")
+            try: await context.bot.send_message(ADMIN_ID, f"💰 CLIENT SAYS PAID!\n👤 @{q.from_user.username} ({q.from_user.id})\n📦 {pkg_key}")
             except: pass
         return
     if d.startswith("approve_"):
@@ -91,18 +91,17 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         pkg_key = parts[2] if len(parts) > 2 else "3min"
         p = PACKAGES.get(pkg_key, PACKAGES["3min"])
         minutes = p["minutes"]
-        end_time = datetime.now() + timedelta(minutes=minutes)
-        ACTIVE_CHATS[user_id] = {"end": end_time, "pkg": pkg_key}
+        ACTIVE_CHATS[user_id] = {"end": datetime.now() + timedelta(minutes=minutes), "pkg": pkg_key}
         context.job_queue.run_once(end_chat_job, when=minutes*60, data={"user_id": user_id}, name=f"end_{user_id}")
-        await q.edit_message_text(f"✅ Approved {user_id} for {minutes} mins")
-        try: await context.bot.send_message(user_id, f"✅ Approved baby! 😍 Your {minutes} mins starts NOW! ⏰ Send Hi 💋")
+        await q.edit_message_text(f"✅ Approved {user_id} for {minutes} mins ({pkg_key})")
+        try: await context.bot.send_message(user_id, f"✅ Approved baby! 😍 Your {minutes} mins chat starts NOW! ⏰\n\nSend Hi, don't keep me waiting... 🥺💦")
         except: pass
         return
     if d.startswith("reject_"):
         if q.from_user.id != ADMIN_ID: return
         user_id = int(d.split("_")[1])
         await q.edit_message_text(f"❌ Rejected {user_id}")
-        try: await context.bot.send_message(user_id, "❌ Not confirmed baby")
+        try: await context.bot.send_message(user_id, "❌ Payment not confirmed baby")
         except: pass
         return
 
@@ -124,7 +123,7 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if ADMIN_ID:
         try:
             kb = [[InlineKeyboardButton("✅ APPROVE", callback_data=f"approve_{update.effective_user.id}_{pkg_key}"), InlineKeyboardButton("❌ REJECT", callback_data=f"reject_{update.effective_user.id}")]]
-            await context.bot.send_photo(ADMIN_ID, photo=update.message.photo[-1].file_id, caption=f"📸 PAYMENT @{update.effective_user.username} ({update.effective_user.id}) - {pkg_key} {PACKAGES[pkg_key]['minutes']}mins", reply_markup=InlineKeyboardMarkup(kb))
+            await context.bot.send_photo(ADMIN_ID, photo=update.message.photo[-1].file_id, caption=f"📸 PAYMENT @{update.effective_user.username} ({update.effective_user.id}) - {pkg_key} {PACKAGES[pkg_key]['minutes']}mins - APPROVE TO START TIMER ⏰", reply_markup=InlineKeyboardMarkup(kb))
         except: pass
 
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -134,17 +133,16 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         end = ACTIVE_CHATS[user_id]["end"]
         if datetime.now() > end:
             del ACTIVE_CHATS[user_id]
-            await update.message.reply_text("⏰ Time's up baby! 🥺 Choose package to continue 👇", reply_markup=get_main_keyboard())
+            await update.message.reply_text("⏰ Time's up baby! Choose package to continue 👇", reply_markup=get_main_keyboard())
             return
         else:
-            remaining = end - datetime.now()
-            mins_left = int(remaining.total_seconds() // 60)
+            mins_left = int((end - datetime.now()).total_seconds() // 60)
             try: await context.bot.send_message(ADMIN_ID, f"💬 CLIENT @{update.effective_user.username} ({user_id}) [{mins_left}min left]: {update.message.text}")
             except: pass
             await update.message.reply_text(f"😘 Got it baby... ({mins_left} mins left) 🥺💦")
             return
     else:
-        await update.message.reply_text("😏 Baby choose package first to chat 💋", reply_markup=get_main_keyboard())
+        await update.message.reply_text("😏 Baby you need to choose package first to chat 💋", reply_markup=get_main_keyboard())
 
 def run_bot():
     application = ApplicationBuilder().token(BOT_TOKEN).build()
@@ -155,7 +153,7 @@ def run_bot():
     application.add_handler(MessageHandler(filters.PHOTO, handle_photo))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
     print("Bot running with TIMER...")
-    application.run_polling()
+    application.run_polling(drop_pending_updates=True)
 
 if __name__ == "__main__":
     threading.Thread(target=run_bot, daemon=True).start()
