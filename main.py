@@ -5,16 +5,12 @@ from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandle
 import threading
 
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
-ADMIN_ID_RAW = os.environ.get("ADMIN_ID", "0")
-try:
-    ADMIN_ID = int(ADMIN_ID_RAW) if ADMIN_ID_RAW else 0
-except:
-    ADMIN_ID = 0
+ADMIN_ID = int(os.environ.get("ADMIN_ID", "0") or 0)
 
 app = Flask(__name__)
 @app.route('/')
 def home():
-    return "Candy Bot Live - OK"
+    return "Candy Bot Live"
 
 VIP_TELEGRAM = "https://t.me/+eEsiq79bG6k2ODlk"
 ONLYFANS_LINK = "https://onlyfans.com/candysquash"
@@ -33,14 +29,7 @@ PAYMENTS = {
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data.clear()
-    # YOUR NEW DESCRIPTION HERE 👇
-    text = (
-        "🔥 Welcome to Candy's Squash 💋\n\n"
-        "😏 Baby I'm horny... don't keep me waiting... 🛏️\n\n"
-        "📹 Video call / Facetime available dm for prices😉 ..... Come let's have real fun💦🥵\n"
-        "🎬 For videos join my VIP!\n\n"
-        "💬 Choose package to chat with me baby👇"
-    )
+    text = "🔥 Welcome to Candy's Squash 💋\n\n😏 Baby I'm horny... don't keep me waiting... 🛏️\n\n📹 Video call / Facetime available dm for prices😉 ..... Come let's have real fun💦🥵\n🎬 For videos join my VIP!\n\n💬 Choose package to chat with me baby👇"
     keyboard = []
     for k, v in PACKAGES.items():
         keyboard.append([InlineKeyboardButton(f"{v['label']} - {v['price_kes']} / {v['price_usd']} / {v['stars']}⭐", callback_data=f"pkg_{k}")])
@@ -49,41 +38,34 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
     else:
         await update.callback_query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
+    if ADMIN_ID:
+        try:
+            user = update.effective_user
+            await context.bot.send_message(chat_id=ADMIN_ID, text=f"👀 NEW USER STARTED BOT!\n\n👤 Name: {user.first_name} {user.last_name or ''}\n🔗 Username: @{user.username or 'no username'}\n🆔 ID: {user.id}\n\nHe is looking at prices... 💦")
+        except:
+            pass
 
 async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     data = query.data
-
     if data == "back_start":
         await start(update, context)
         return
-
     if data == "vip_only":
         text = "🎬 Candy's Private Videos 🔥\n\n👇 Join VIP:"
-        keyboard = [
-            [InlineKeyboardButton("🔥 JOIN VIP TELEGRAM 💦", url=VIP_TELEGRAM)],
-            [InlineKeyboardButton("💦 ONLYFANS 🥵", url=ONLYFANS_LINK)],
-            [InlineKeyboardButton("⬅️ Back 💬", callback_data="back_start")]
-        ]
+        keyboard = [[InlineKeyboardButton("🔥 JOIN VIP TELEGRAM 💦", url=VIP_TELEGRAM)], [InlineKeyboardButton("💦 ONLYFANS 🥵", url=ONLYFANS_LINK)], [InlineKeyboardButton("⬅️ Back 💬", callback_data="back_start")]]
         await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
         return
-
     if data.startswith("pkg_"):
         key = data.replace("pkg_", "")
         pkg = PACKAGES.get(key)
         context.user_data["pkg"] = key
         context.user_data["pkg_obj"] = pkg
-        text = f"😍 {pkg['title']} 😍\n\n💰 {pkg['price_kes']} | {pkg['price_usd']} (Skrill/Binance) | {pkg['stars']} Stars ⭐\n\n👇 Choose pay method:"
-        keyboard = [
-            [InlineKeyboardButton(f"⭐ Pay {pkg['stars']} Stars Instant", callback_data=f"pay_stars_{key}")],
-            [InlineKeyboardButton(f"💳 Skrill - {pkg['price_usd']}", callback_data=f"pay_skrill_{key}")],
-            [InlineKeyboardButton(f"₿ Binance - {pkg['price_usd']}", callback_data=f"pay_binance_{key}")],
-            [InlineKeyboardButton("⬅️ Back", callback_data="back_start")]
-        ]
+        text = f"😍 {pkg['title']} 😍\n\n💰 {pkg['price_kes']} | {pkg['price_usd']} | {pkg['stars']} Stars ⭐\n\n👇 Choose pay method:"
+        keyboard = [[InlineKeyboardButton(f"⭐ Pay {pkg['stars']} Stars Instant", callback_data=f"pay_stars_{key}")], [InlineKeyboardButton(f"💳 Skrill - {pkg['price_usd']}", callback_data=f"pay_skrill_{key}")], [InlineKeyboardButton(f"₿ Binance - {pkg['price_usd']}", callback_data=f"pay_binance_{key}")], [InlineKeyboardButton("⬅️ Back", callback_data="back_start")]]
         await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
         return
-
     if data.startswith("pay_"):
         parts = data.split("_")
         pay_key = parts[1]
@@ -92,49 +74,30 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data["pkg"] = pkg_key
         context.user_data["pkg_obj"] = pkg
         context.user_data["pay"] = pay_key
-
         if pay_key == "stars":
             try:
-                await context.bot.send_invoice(
-                    chat_id=query.from_user.id,
-                    title=pkg['title'],
-                    description=f"{pkg['label']} - Chatting ONLY",
-                    payload=f"candy_{pkg_key}_{query.from_user.id}",
-                    provider_token="",
-                    currency="XTR",
-                    prices=[LabeledPrice(label=pkg['label'], amount=pkg['stars'])]
-                )
+                await context.bot.send_invoice(chat_id=query.from_user.id, title=pkg['title'], description=f"{pkg['label']} - Chatting ONLY", payload=f"candy_{pkg_key}_{query.from_user.id}", provider_token="", currency="XTR", prices=[LabeledPrice(label=pkg['label'], amount=pkg['stars'])])
             except Exception as e:
                 await query.edit_message_text(f"❌ Stars error baby, use Skrill/Binance: {e}")
         else:
             pay_info = PAYMENTS.get(pay_key, "")
             text = f"💰 Payment Details\n\n📦 {pkg['label']}\n💵 Amount: {pkg['price_usd']} / {pkg['price_kes']}\n\n{pay_info}\n\n📸 Send screenshot AFTER paying baby 😍"
-            keyboard = [
-                [InlineKeyboardButton("✅ I Have Paid", callback_data=f"paid_{pay_key}_{pkg_key}")],
-                [InlineKeyboardButton("⬅️ Back", callback_data=f"pkg_{pkg_key}")]
-            ]
+            keyboard = [[InlineKeyboardButton("✅ I Have Paid", callback_data=f"paid_{pay_key}_{pkg_key}")], [InlineKeyboardButton("⬅️ Back", callback_data=f"pkg_{pkg_key}")]]
             await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
         return
-
     if data.startswith("paid_"):
         _, pay_method, pkg_key = data.split("_", 2)
         pkg = PACKAGES.get(pkg_key, {"label": pkg_key})
         context.user_data["pkg"] = pkg_key
         context.user_data["pkg_obj"] = pkg
         context.user_data["pay"] = pay_method
-        
         await query.edit_message_text(f"✅ Got it baby! 📸 Now SEND your screenshot of {pay_method.upper()} payment for {pkg['label']} 💦\n\nI will approve fast! ⏰")
-        
         if ADMIN_ID:
             try:
                 user = query.from_user
-                await context.bot.send_message(
-                    chat_id=ADMIN_ID,
-                    text=f"🔔 USER CHOSE & PAID!\n\n👤 User: @{user.username} ({user.first_name}) ID: {user.id}\n📦 Package: {pkg['label']} - {pkg['price_kes']} / {pkg['price_usd']}\n💳 Method: {pay_method.upper()}\n\n⏳ Waiting for screenshot..."
-                )
+                await context.bot.send_message(chat_id=ADMIN_ID, text=f"🔔 USER CHOSE & PAID!\n\n👤 User: @{user.username} ({user.first_name}) ID: {user.id}\n📦 Package: {pkg['label']} - {pkg['price_kes']} / {pkg['price_usd']}\n💳 Method: {pay_method.upper()}\n\n⏳ Waiting for screenshot...")
             except:
                 pass
-
     if data.startswith("approve_") or data.startswith("reject_"):
         if query.from_user.id != ADMIN_ID:
             return
@@ -185,15 +148,11 @@ def run_flask():
     app.run(host="0.0.0.0", port=port)
 
 if __name__ == "__main__":
-    if not BOT_TOKEN:
-        print("ERROR: BOT_TOKEN not set!")
-    else:
-        threading.Thread(target=run_flask, daemon=True).start()
-        print(f"Bot running... ADMIN_ID: {ADMIN_ID}")
-        application = ApplicationBuilder().token(BOT_TOKEN).build()
-        application.add_handler(CommandHandler(["start", "prices", "pay"], start))
-        application.add_handler(CallbackQueryHandler(buttons))
-        application.add_handler(PreCheckoutQueryHandler(precheckout))
-        application.add_handler(MessageHandler(filters.SUCCESSFUL_PAYMENT, successful_payment))
-        application.add_handler(MessageHandler(filters.PHOTO, handle_photo))
-        application.run_polling()
+    threading.Thread(target=run_flask, daemon=True).start()
+    application = ApplicationBuilder().token(BOT_TOKEN).build()
+    application.add_handler(CommandHandler(["start", "prices", "pay"], start))
+    application.add_handler(CallbackQueryHandler(buttons))
+    application.add_handler(PreCheckoutQueryHandler(precheckout))
+    application.add_handler(MessageHandler(filters.SUCCESSFUL_PAYMENT, successful_payment))
+    application.add_handler(MessageHandler(filters.PHOTO, handle_photo))
+    application.run_polling()
